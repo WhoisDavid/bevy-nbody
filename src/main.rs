@@ -14,13 +14,20 @@ use plugins::nbody::{BodyBundle, Gravity, NBody};
 use plugins::pan_orbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 
 #[derive(FromArgs)]
-/// Reach new heights.
+/** 
+N-body 3D simulation with Bevy
+
+Several startup options:
+- planets of the Solar System - and Pluto :'( - with data from JPL Horizons as-of 2021-04-18.
+- figure-8 stable three-body solution
+- random bodies
+*/
 struct Flags {
-    /// startup system: Solar, Figure8 or Random
+    /// startup system [solar (default)|figure8|random]
     #[argh(option, default = "Startup::SolarSystem")]
     startup: Startup,
 
-    /// speed of the simulation
+    /// speed of the simulation [default: 1.0x]
     #[argh(option, default = "1.0")]
     speed: f32,
 
@@ -28,6 +35,7 @@ struct Flags {
     #[argh(switch, short = 'd')]
     debug: bool,
 }
+
 enum Startup {
     SolarSystem,
     Figure8,
@@ -39,7 +47,7 @@ impl FromStr for Startup {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "solar" | "solarsystem" => Ok(Self::SolarSystem),
+            "solar" => Ok(Self::SolarSystem),
             "figure8" => Ok(Self::Figure8),
             "random" => Ok(Self::Random),
             _ => Err(String::from(
@@ -210,9 +218,9 @@ pub fn random_bodies(
         );
 
         let vel = Vec3::new(
-            rng.gen_range(-10.0..50.0),
-            rng.gen_range(-10.0..50.0),
-            rng.gen_range(-10.0..50.0),
+            rng.gen_range(-10.0..30.0),
+            rng.gen_range(-10.0..30.0),
+            rng.gen_range(-10.0..30.0),
         );
 
         commands
