@@ -1,36 +1,84 @@
-use rand::Rng;
-use rand_distr::{Distribution, UnitSphere};
+use std::str::FromStr;
 
-mod nbody;
-pub mod plugins;
-
+use argh::FromArgs;
 use bevy::prelude::*;
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     pbr::AmbientLight,
 };
+use rand::Rng;
+use rand_distr::{Distribution, UnitSphere};
 
-use nbody::{BodyBundle, Gravity, NBody};
+mod plugins;
+use plugins::nbody::{BodyBundle, Gravity, NBody};
 use plugins::pan_orbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 
+#[derive(FromArgs)]
+/// Reach new heights.
+struct Flags {
+    /// startup system: Solar, Figure8 or Random
+    #[argh(option, default = "Startup::SolarSystem")]
+    startup: Startup,
+
+    /// speed of the simulation
+    #[argh(option, default = "1.0")]
+    speed: f32,
+
+    /// enable diagnostics
+    #[argh(switch, short = 'd')]
+    debug: bool,
+}
+enum Startup {
+    SolarSystem,
+    Figure8,
+    Random,
+}
+
+impl FromStr for Startup {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "solar" | "solarsystem" => Ok(Self::SolarSystem),
+            "figure8" => Ok(Self::Figure8),
+            "random" => Ok(Self::Random),
+            _ => Err(String::from(
+                "Invalid input. Should be: solar[system], figure8 or random",
+            )),
+        }
+    }
+}
+
 fn main() {
-    App::build()
-        .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
+    let args: Flags = argh::from_env();
+
+    let mut app = App::build();
+    app.insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
         .insert_resource(AmbientLight {
             color: Color::WHITE,
             brightness: 2.0,
         })
         .insert_resource(Msaa { samples: 4 })
-        .add_plugins(DefaultPlugins)
-        .add_plugin(PanOrbitCameraPlugin)
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_startup_system(add_starry_background.system())
-        // .add_startup_system(random_bodies.system())
-        // .add_startup_system(figure8_bodies.system())
-        .add_startup_system(solar_system.system())
-        .add_plugin(NBody { speed_factor: 10.0 })
-        .run()
+        .add_plugins(DefaultPlugins);
+
+    if args.debug {
+        app.add_plugin(FrameTimeDiagnosticsPlugin::default())
+            .add_plugin(LogDiagnosticsPlugin::default());
+    };
+
+    app.add_plugin(PanOrbitCameraPlugin)
+        .add_plugin(NBody {
+            speed_factor: args.speed,
+        })
+        .add_startup_system(add_starry_background.system());
+
+    match args.startup {
+        Startup::SolarSystem => app.add_startup_system(solar_system.system()),
+        Startup::Figure8 => app.add_startup_system(figure8_bodies.system()),
+        Startup::Random => app.add_startup_system(random_bodies.system()),
+    };
+
+    app.run()
 }
 
 fn spawn_z_camera(commands: &mut Commands, z: f32) {
@@ -62,7 +110,6 @@ fn add_starry_background(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    // asset_server: Res<AssetServer>,
 ) {
     let mut rng = rand::thread_rng();
 
@@ -82,7 +129,6 @@ fn add_starry_background(
             material: materials.add(Color::WHITE.into()),
             ..Default::default()
         });
-        // .insert(Light::default());
     })
 }
 
@@ -129,6 +175,7 @@ pub fn figure8_bodies(
     spawn_z_light(&mut commands, 5.0, 200.0, 20.0);
 }
 
+/// Generate random bodies around a large star
 pub fn random_bodies(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -149,11 +196,11 @@ pub fn random_bodies(
             material: materials.add(Color::YELLOW.into()),
             ..Default::default()
         })
-        .insert_bundle(BodyBundle::new(10_000.0, Vec3::ZERO, Vec3::ZERO));
-    // .insert(Light {
-    //     color: Color::ORANGE_RED,
-    //     ..Default::default()
-    // });
+        .insert_bundle(BodyBundle::new(10_000.0, Vec3::ZERO, Vec3::ZERO))
+        .insert(Light {
+            color: Color::WHITE,
+            ..Default::default()
+        });
 
     (0..10).for_each(|_| {
         let pos = Vec3::new(
@@ -192,7 +239,7 @@ pub fn random_bodies(
 }
 
 /// Add the sun and all the planets of the Solar system (+ Pluto)
-/// Units are scales:
+/// Units are scaled:
 /// Mass = 10^24 kg
 /// Distance = AU (= 1.5 x 10^11 m)
 /// Velocity = AU / Day
@@ -256,7 +303,6 @@ pub fn solar_system(
                 ..Default::default()
             })
             .insert_bundle($name);
-
     };
 }
     // Data pulled from JPL Horizons as of 2021-04-18
@@ -345,5 +391,5 @@ pub fn solar_system(
         col=Color::GRAY,
     );
 
-    spawn_z_camera(&mut commands, 500.0);
+    spawn_z_camera(&mut commands, 200.0);
 }
