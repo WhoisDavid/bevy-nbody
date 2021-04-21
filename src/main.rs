@@ -29,7 +29,7 @@ fn main() {
         // .add_startup_system(random_bodies.system())
         // .add_startup_system(figure8_bodies.system())
         .add_startup_system(solar_system.system())
-        .add_plugin(NBody { speed_factor: 1.0 })
+        .add_plugin(NBody { speed_factor: 10.0 })
         .run()
 }
 
