@@ -1,10 +1,14 @@
 use rand::Rng;
+use rand_distr::{Distribution, UnitSphere};
 
 mod nbody;
 pub mod plugins;
 
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
+use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    pbr::AmbientLight,
+};
 
 use nbody::{BodyBundle, Gravity, NBody};
 use plugins::pan_orbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
@@ -12,14 +16,19 @@ use plugins::pan_orbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 fn main() {
     App::build()
         .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.1)))
+        .insert_resource(AmbientLight {
+            color: Color::WHITE,
+            brightness: 2.0,
+        })
         .insert_resource(Msaa { samples: 4 })
         .add_plugins(DefaultPlugins)
         .add_plugin(PanOrbitCameraPlugin)
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
-        // .add_startup_system(add_figure8_bodies.system())
+        .add_startup_system(add_starry_background.system())
+        // .add_startup_system(random_bodies.system())
+        // .add_startup_system(figure8_bodies.system())
         .add_startup_system(solar_system.system())
-        // .add_startup_system(add_light_n_camera.system())
         .add_plugin(NBody { speed_factor: 1.0 })
         .run()
 }
@@ -30,7 +39,10 @@ fn spawn_z_camera(commands: &mut Commands, z: f32) {
             transform: Transform::from_xyz(0.0, 0.0, z).looking_at(Vec3::ZERO, Vec3::Y),
             ..Default::default()
         })
-        .insert(PanOrbitCamera::default());
+        .insert(PanOrbitCamera {
+            radius: z,
+            ..Default::default()
+        });
 }
 
 fn spawn_z_light(commands: &mut Commands, z: f32, intensity: f32, range: f32) {
@@ -44,6 +56,34 @@ fn spawn_z_light(commands: &mut Commands, z: f32, intensity: f32, range: f32) {
         transform: Transform::from_xyz(0.0, z, z),
         ..Default::default()
     });
+}
+
+fn add_starry_background(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    // asset_server: Res<AssetServer>,
+) {
+    let mut rng = rand::thread_rng();
+
+    let stars: Vec<Vec3> = UnitSphere
+        .sample_iter(&mut rng)
+        .take(1000)
+        .map(|xyz| 800.0 * Vec3::new(xyz[0], xyz[1], xyz[2]))
+        .collect();
+
+    stars.into_iter().for_each(|s| {
+        commands.spawn_bundle(PbrBundle {
+            transform: Transform::from_translation(s),
+            mesh: meshes.add(Mesh::from(shape::Icosphere {
+                radius: 1.0,
+                subdivisions: 2,
+            })),
+            material: materials.add(Color::WHITE.into()),
+            ..Default::default()
+        });
+        // .insert(Light::default());
+    })
 }
 
 /// Figure-8 solution
@@ -89,7 +129,7 @@ pub fn figure8_bodies(
     spawn_z_light(&mut commands, 5.0, 200.0, 20.0);
 }
 
-pub fn add_random_bodies(
+pub fn random_bodies(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -179,17 +219,24 @@ pub fn solar_system(
     commands
         .spawn_bundle(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Icosphere {
-                radius: 3.0,
+                radius: 2.8,
                 subdivisions: 10,
             })),
-            material: materials.add(Color::YELLOW.into()),
+            material: materials.add(StandardMaterial {
+                base_color: Color::YELLOW.into(),
+                roughness: 0.6,
+                emissive: Color::YELLOW,
+                ..Default::default()
+            }),
             ..Default::default()
         })
-        .insert_bundle(sun);
-    // .insert(Light {
-    //     color: Color::ORANGE_RED,
-    //     ..Default::default()
-    // });
+        .insert_bundle(sun)
+        .insert(Light {
+            color: Color::WHITE,
+            intensity: 50_000.0,
+            range: 2000.0,
+            ..Default::default()
+        });
 
     macro_rules! spawn_planet {
     ($name:ident, m=$mass:literal, pos=($($pos:literal),+), vel=($($vel:literal),+), r=$radius:literal, col=$col:expr $(,)?) => {
@@ -200,7 +247,12 @@ pub fn solar_system(
                     radius: $radius / 10_000.0,
                     subdivisions: 5,
                 })),
-                material: materials.add($col.into()),
+                material: materials.add(StandardMaterial {
+                    base_color: $col.into(),
+                    roughness: 0.6,
+                    reflectance: 0.1,
+                    ..Default::default()
+                }),
                 ..Default::default()
             })
             .insert_bundle($name);
@@ -245,7 +297,7 @@ pub fn solar_system(
         pos=(-7.669365607923907E-01, 1.437715683938847E+00, 4.894216325150345E-02),
         vel=(-1.181841087219943E-02, -5.396860897762226E-03, 1.768153357356463E-04),
         r=3389.92,
-        col=Color::ORANGE_RED,
+        col=Color::RED,
     );
     #[rustfmt::skip]
     spawn_planet!(
@@ -294,5 +346,4 @@ pub fn solar_system(
     );
 
     spawn_z_camera(&mut commands, 500.0);
-    spawn_z_light(&mut commands, 500.0, 2_000_000.0, 1000.0);
 }
