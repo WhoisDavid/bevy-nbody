@@ -3,7 +3,7 @@
 Experiments with a simple n-body simulation in 3D to checkout [Bevy](https://bevyengine.org/).
 
 In particular, pretty cool ephemerides data from JPL Horizons allowing you to get initial conditions to simulate the Solar System.
-Distances between objects are to-scale (`0.1 AU/unit`). Radiuses of planets but not the Sun as well (`10^-4 km/unit`). Note that therefore radiuses and distances use different units.
+Distances between objects are to-scale (`0.1 AU/unit`). Radiuses of planets as well (`10^-4 km/unit`) but not the Sun. Note that therefore radiuses and distances use a different scale.
 ```
 cargo run --release -- --startup solar --speed 10
 ```
