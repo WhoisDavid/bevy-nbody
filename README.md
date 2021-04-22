@@ -1,6 +1,6 @@
 # bevy-nbody
 
-Experiments with a simple n-body simulation in 3D with [Bevy](https://bevyengine.org/).
+Experiments with a simple n-body simulation in 3D to checkout [Bevy](https://bevyengine.org/).
 
 In particular, pretty cool ephemerides data from JPL Horizons allowing you to get initial conditions to simulate the Solar System:
 
