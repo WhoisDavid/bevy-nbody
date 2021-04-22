@@ -17,10 +17,15 @@ use plugins::pan_orbit_camera::{PanOrbitCamera, PanOrbitCameraPlugin};
 /** 
 N-body 3D simulation with Bevy
 
-Several startup options:
-- planets of the Solar System - and Pluto :'( - with data from JPL Horizons as-of 2021-04-18.
-- figure-8 stable three-body solution
-- random bodies
+Several `--startup` options:
+* solar: planets of the Solar System - and Pluto :'( - with data from JPL Horizons as-of 2021-04-18.
+* figure8: stable figure-8 three-body solution
+* random: generates random bodies around a large star
+
+Mouse controls: 
+* right-click & drag to orbit the camera 
+* scroll to zoom
+
 */
 struct Flags {
     /// startup system [solar (default)|figure8|random]
@@ -31,7 +36,7 @@ struct Flags {
     #[argh(option, default = "1.0")]
     speed: f32,
 
-    /// enable diagnostics
+    /// enable diagnostics in the console
     #[argh(switch, short = 'd')]
     debug: bool,
 }
