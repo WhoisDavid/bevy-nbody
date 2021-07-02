@@ -1,4 +1,4 @@
-# bevy-nbody
+# <img src="https://raw.githubusercontent.com/BlackPhlox/How-To-Pimp-Your-GitHub/master/06.svg"> bevy-nbody
 
 Experiments with a basic n-body simulation in 3D to checkout [Bevy](https://bevyengine.org/).
 
